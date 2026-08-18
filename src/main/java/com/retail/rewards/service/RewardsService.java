@@ -82,7 +82,7 @@ public class RewardsService {
         return monthlyRewards;
     }
 
-    private BigDecimal getRewardPoints(BigDecimal amount) {
+    public BigDecimal getRewardPoints(BigDecimal amount) {
         int wholeAmount = amount.setScale(0, RoundingMode.FLOOR).intValue();
         if(wholeAmount > 100) {
             return BigDecimal.valueOf((wholeAmount - 100) * 2L + 50);
