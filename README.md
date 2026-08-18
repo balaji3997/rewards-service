@@ -3,7 +3,7 @@
 ## Stack
 
 - Java 17
-- Spring Boot 4.1.0
+- Spring Boot 3.3.0
 - Spring Web
 - Spring Data JPA
 - H2 in-memory database
@@ -40,13 +40,11 @@ Password:
 
 ## Design implementation
 
-Reward Calculation API fetches rewards summary based on either `startDate` - `endDate` range (or) past `months` till current date as request parameter for the `customerId` specified in path parameter.
+The Reward Calculation API retrieves a rewards summary for a specific customerId provided as a path parameter. The summary can be fetched based on either a `startDate` - `endDate` range or the past `months` from the current date, specified as request parameters.
 
-Note: If no Request Parameter is provided `months` will be defaulted to `3` months.
+If no request parameter is provided, the `months` parameter defaults to `3`.
 
-Transactions for the customers between the date range is fetched from sql.
-
-Reward points are calculated for each months separately along with total rewards for customer under RewardsService class.
+The transactions for the specified customer within the given date range are fetched from the database using SQL queries. Reward points are calculated for each month individually, along with the total rewards for the customer, in the `RewardsService` class.
 
 ### Reward rule
 
@@ -69,11 +67,11 @@ Reward points are calculated by considering the dollar amount and ignores cent v
 
 ##### Endpoint
 ```text
-GET /api/v1/CUST00001/rewards?startDate=2026-07-01&endDate=2026-08-01
+GET /api/v1/customers/CUST00001/rewards?startDate=2026-07-01&endDate=2026-08-01
 ```
 ##### Request
 ```text
-curl --location 'http://localhost:8080/api/v1/CUST00001/rewards?startDate=2026-07-01&endDate=2026-08-01'
+curl --location 'http://localhost:8080/api/v1/customers/CUST00001/rewards?startDate=2026-07-01&endDate=2026-08-01'
 ```
 
 
@@ -85,7 +83,7 @@ GET /api/v1/customers/CUST00001/rewards?months=4
 ```
 ##### Request 
 ```text
-curl --location 'http://localhost:8080/api/v1/CUST00001/rewards?months=4'
+curl --location 'http://localhost:8080/api/v1/customers/CUST00001/rewards?months=4'
 ```
 
 - #### If `months` details were not provided like below, it will be defaulted to past 3 months
@@ -96,7 +94,7 @@ GET /api/v1/customers/CUST00001/rewards
 ```
 ##### Request
 ```text
-curl --location 'http://localhost:8080/api/v1/CUST00002/rewards'
+curl --location 'http://localhost:8080/api/v1/customers/CUST00002/rewards'
 ```
 
 

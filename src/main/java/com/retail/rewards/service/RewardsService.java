@@ -10,11 +10,9 @@ import com.retail.rewards.model.MonthlyRewardInfo;
 import com.retail.rewards.model.RewardsSummaryResponse;
 import com.retail.rewards.repository.CustomerRepository;
 import com.retail.rewards.repository.TransactionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -27,12 +25,14 @@ import java.util.stream.Collectors;
 @Service
 public class RewardsService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
-    @Autowired
-    private TransactionRepository transactionRepository;
+    private final TransactionRepository transactionRepository;
 
+    public RewardsService(CustomerRepository customerRepository, TransactionRepository transactionRepository) {
+        this.customerRepository = customerRepository;
+        this.transactionRepository = transactionRepository;
+    }
     public RewardsSummaryResponse customerRewardsSummary(String customerId, Integer months, LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveDateRange(months, startDate, endDate);
         Customer customer = customerRepository.findById(customerId).orElseThrow(() -> new InvalidCustomerException(customerId));
@@ -47,8 +47,19 @@ public class RewardsService {
     }
 
     private DateRange resolveDateRange(Integer months, LocalDate startDate, LocalDate endDate) {
-        if (startDate != null || endDate != null) {
+        if (startDate != null && endDate != null) {
             return verifyAndCalculateDateRangeForDuration(startDate, endDate);
+        }
+        if (months == null) {
+            months = 3;
+        }
+        if (endDate != null) {
+            LocalDate calculatedStartDate = endDate.minusMonths(months);
+            return verifyAndCalculateDateRangeForDuration(calculatedStartDate, endDate);
+        } else if (startDate != null) {
+            LocalDate startDatePlusMonths = startDate.plusMonths(months);
+            LocalDate calculatedEndDate = (startDatePlusMonths.isAfter(LocalDate.now()))?LocalDate.now():startDatePlusMonths;
+            return verifyAndCalculateDateRangeForDuration(startDate, calculatedEndDate);
         }
         return verifyAndCalculateDateRangeForPastMonths(months);
     }
@@ -61,10 +72,8 @@ public class RewardsService {
         }
         return new DateRange(startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay().minusSeconds(1));
     }
-    private DateRange verifyAndCalculateDateRangeForPastMonths(int months) {
-        if (months < 1 || months > 12) {
-            throw new InvalidDateRangeException("Month provided is invalid.");
-        }
+
+    private DateRange verifyAndCalculateDateRangeForPastMonths(Integer months) {
         LocalDateTime currTime = LocalDateTime.now();
         LocalDateTime startTime = currTime.minusMonths(months);
         return new DateRange(startTime, currTime);
@@ -83,14 +92,16 @@ public class RewardsService {
     }
 
     public BigDecimal getRewardPoints(BigDecimal amount) {
-        int wholeAmount = amount.setScale(0, RoundingMode.FLOOR).intValue();
-        if(wholeAmount > 100) {
-            return BigDecimal.valueOf((wholeAmount - 100) * 2L + 50);
-        } else if(wholeAmount > 50) {
-            return BigDecimal.valueOf(wholeAmount - 50);
+        if (amount.compareTo(BigDecimal.valueOf(100)) > 0) {
+            return amount.subtract(BigDecimal.valueOf(100))
+                    .multiply(BigDecimal.valueOf(2))
+                    .add(BigDecimal.valueOf(50));
+        } else if (amount.compareTo(BigDecimal.valueOf(50)) > 0) {
+            return amount.subtract(BigDecimal.valueOf(50));
         }
         return BigDecimal.ZERO;
     }
+
     private RewardsSummaryResponse buildRewardsSummaryResponse(Customer customer, LocalDate startDate, LocalDate endDate, List<MonthlyRewardInfo> monthlyRewards) {
         BigDecimal totalRewardPoints = monthlyRewards.stream().map(MonthlyRewardInfo::getRewardPoints).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalTransactionAmount = monthlyRewards.stream().map(MonthlyRewardInfo::getMonthlyTransactionAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
