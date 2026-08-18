@@ -130,5 +130,15 @@ curl --location 'http://localhost:8080/api/v1/CUST00002/rewards'
 }
 ```
 
+### API Sample Error Response
+
+```text
+{
+    "statusCode": 404,
+    "error": "NOT_FOUND",
+    "errorMessage": "cust003 Not found!",
+    "timestamp": "2026-08-18T10:57:27.5779677"
+}
+```
 
 
