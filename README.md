@@ -40,12 +40,43 @@ Password: root@123
 
 ## Design implementation
 
-The Reward Calculation API retrieves a rewards summary for a specific customerId provided as a path parameter. The summary can be fetched based on either a `startDate` - `endDate` range or the past `months` from the current date, specified as request parameters.
 
-If no request parameter is provided, the `months` parameter defaults to `3`.
+### Design and Business Logic
+The Reward Calculation API retrieves a rewards summary for a specific `customerId` provided as a path parameter. The summary can be fetched based on a `startDate`–`endDate` range, a past dynamic `months` window, or a combination of both specified as request parameters.  
 
-The transactions for the specified customer within the given date range are fetched from the database using SQL queries. Reward points are calculated for each month individually, along with the total rewards for the customer, in the `RewardsService` class.
+The transactions for the specified customer within the calculated date range are fetched from the database using SQL queries. Reward points are calculated for each month individually, along with the aggregated total rewards for the customer, inside the `RewardsService` class.
 
+### Date Range Resolution Logic
+
+The application dynamically resolves the active transaction date range based on the optional query parameters provided (`startDate`, `endDate`, and `months`):
+
+1. **Both `startDate` & `endDate` Provided:**
+    * Uses the explicit `[startDate, endDate]` range.
+    * The `months` parameter is ignored.
+
+2. **Only `startDate` Provided:**
+    * Calculates `endDate = startDate + months`.
+    * If `months` is omitted, it defaults to **3 months**.
+    * *Note:* If the calculated `endDate` extends past the current date, it is capped at `LocalDate.now()`.
+
+3. **Only `endDate` Provided:**
+    * Calculates `startDate = endDate - months`.
+    * If `months` is omitted, it defaults to **3 months**.
+
+4. **Neither Date Provided:**
+    * Calculates `startDate = currentDate - months` and `endDate = currentDate`.
+    * If no parameters are provided at all, `months` defaults to **3** (i.e., past 3 months from today).
+
+#### Parameter Resolution Matrix
+
+| Provided Parameters | Calculated Start Date | Calculated End Date | Behavioral Rule |
+| :--- | :--- | :--- | :--- |
+| `startDate`, `endDate` | `startDate` | `endDate` | Explicit range used; `months` parameter is ignored. |
+| `startDate` only | `startDate` | `startDate + months` | `months` defaults to 3 if omitted. Capped at `now()` if in the future. |
+| `endDate` only | `endDate - months` | `endDate` | `months` defaults to 3 if omitted. |
+| `months` only | `now() - months` | `now()` | Dynamic past lookback window. |
+| *None* | `now() - 3 months` | `now()` | System default 3-month lookback. |
+    
 ### Reward rule
 
 ```text
