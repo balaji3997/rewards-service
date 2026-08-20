@@ -16,12 +16,15 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.retail.rewards.common.Constants.DEFAULT_MONTHS;
 
 @Service
 public class RewardsService {
@@ -53,7 +56,7 @@ public class RewardsService {
             return verifyAndCalculateDateRangeForDuration(startDate, endDate);
         }
         if (months == null) {
-            months = 3;
+            months = DEFAULT_MONTHS;
         }
         if (endDate != null) {
             LocalDate calculatedStartDate = endDate.minusMonths(months);
@@ -67,12 +70,10 @@ public class RewardsService {
     }
 
     private DateRange verifyAndCalculateDateRangeForDuration(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new InvalidDateRangeException("Need to provide both startDate and endDate.");
-        } else if (endDate.isBefore(startDate)) {
+       if (endDate.isBefore(startDate)) {
             throw new InvalidDateRangeException("Start date must be before end date.");
         }
-        return new DateRange(startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay().minusSeconds(1));
+        return new DateRange(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
     }
 
     private DateRange verifyAndCalculateDateRangeForPastMonths(Integer months) {
@@ -83,12 +84,11 @@ public class RewardsService {
 
     private List<MonthlyRewardInfo> generateMonthlyRewards(Map<YearMonth, List<Transaction>> monthwiseTransactions, DateRange range) {
         List<MonthlyRewardInfo> monthlyRewards = new ArrayList<>();
-        for (LocalDateTime month = range.startDate(); !month.isAfter(range.endDate()); month = month.plusMonths(1)) {
-            YearMonth monthInfo = YearMonth.from(month);
+        for (YearMonth month = YearMonth.from(range.startDate()); !month.isAfter(YearMonth.from(range.endDate())); month = month.plusMonths(1)) {
             List<Transaction> transactions = monthwiseTransactions.getOrDefault(YearMonth.from(month), Collections.emptyList());
             BigDecimal rewardPoints = transactions.stream().map(transaction -> getRewardPoints(transaction.getAmount())).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal monthlyTransactionAmount = transactions.stream().map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-            monthlyRewards.add(new MonthlyRewardInfo(monthInfo, rewardPoints, transactions.size(), monthlyTransactionAmount));
+            monthlyRewards.add(new MonthlyRewardInfo(month, rewardPoints, transactions.size(), monthlyTransactionAmount));
         }
         return monthlyRewards;
     }
