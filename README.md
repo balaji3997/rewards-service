@@ -33,8 +33,8 @@ transactions
 ### H2 in-memory Database details:
 
 ```text
-User Name: sa
-Password:
+User Name: root
+Password: root@123
 ```
 
 
