@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -97,7 +98,7 @@ public class RewardsServiceTest {
         );
 
         when(customerRepository.findById(customerId)).thenReturn(java.util.Optional.of(customer));
-        when(transactionRepository.findTransactionsForCustomerInDateRange(customerId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)))
+        when(transactionRepository.findTransactionsForCustomerInDateRange(customerId, startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX)))
                 .thenReturn(transactions);
 
         RewardsSummaryResponse response = rewardsService.customerRewardsSummary(customerId, 3, startDate, endDate);
@@ -108,7 +109,7 @@ public class RewardsServiceTest {
         assertEquals(new BigDecimal("450.00"), response.totalTransactionAmount());
 
         verify(customerRepository, times(1)).findById(customerId);
-        verify(transactionRepository, times(1)).findTransactionsForCustomerInDateRange(customerId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59));
+        verify(transactionRepository, times(1)).findTransactionsForCustomerInDateRange(customerId, startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
     }
 
     @Test
