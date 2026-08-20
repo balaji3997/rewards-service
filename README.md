@@ -59,7 +59,7 @@ amount > 100
     50 points + 2 points for every dollar above 100
 ```
 
-Reward points are calculated by considering the dollar amount and ignores cent values.
+The rewards calculation includes cent values, ensuring precise reward points based on the full transaction amount
 
 ## API Details
 
@@ -130,13 +130,23 @@ curl --location 'http://localhost:8080/api/v1/customers/CUST00002/rewards'
 
 ### API Sample Error Response
 
+- **Invalid Customer Id is passed**:
 ```text
-{
-    "statusCode": 404,
-    "error": "NOT_FOUND",
-    "errorMessage": "cust003 Not found!",
-    "timestamp": "2026-08-18T10:57:27.5779677"
-}
+    {
+        "statusCode": 404,
+        "error": "NOT_FOUND",
+        "errorMessage": "cust003 Not found!",
+        "timestamp": "2026-08-18T10:57:27.5779677"
+    }
 ```
 
+- **Invalid Date Range**:
+```text
+  {
+      "statusCode": 400,
+      "error": "BAD_REQUEST",
+      "errorMessage": "Start date must be before end date.",
+      "timestamp": "2026-08-18T10:57:27.5779677"
+  }
+```
 

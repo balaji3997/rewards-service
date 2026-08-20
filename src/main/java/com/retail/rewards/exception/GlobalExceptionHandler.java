@@ -1,6 +1,7 @@
 package com.retail.rewards.exception;
 
 import com.retail.rewards.model.ErrorResponse;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,7 +34,16 @@ public class GlobalExceptionHandler {
         logException(exc);
         return buildErrorResponse(exc.getMessage(), HttpStatus.BAD_REQUEST);
     }
-
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException exc) {
+        logException(exc);
+        String message = exc.getConstraintViolations()
+                .stream()
+                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                .reduce((msg1, msg2) -> msg1 + ", " + msg2)
+                .orElse("Constraint Validation error occurred.");
+        return buildErrorResponse(message, HttpStatus.BAD_REQUEST);
+    }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception exc) {
         logException(exc);
