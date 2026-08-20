@@ -4,6 +4,7 @@ import com.retail.rewards.entity.Customer;
 import com.retail.rewards.entity.Transaction;
 import com.retail.rewards.exception.InvalidCustomerException;
 import com.retail.rewards.exception.InvalidDateRangeException;
+import com.retail.rewards.exception.NoTransactionsFoundException;
 import com.retail.rewards.model.CustomerInfo;
 import com.retail.rewards.model.DateRange;
 import com.retail.rewards.model.MonthlyRewardInfo;
@@ -33,17 +34,18 @@ public class RewardsService {
         this.customerRepository = customerRepository;
         this.transactionRepository = transactionRepository;
     }
+
     public RewardsSummaryResponse customerRewardsSummary(String customerId, Integer months, LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveDateRange(months, startDate, endDate);
         Customer customer = customerRepository.findById(customerId).orElseThrow(() -> new InvalidCustomerException(customerId));
-        List<Transaction> transactions =  transactionRepository.findTransactionsForCustomerInDateRange(customerId, range.getStartDate(), range.getEndDate());
-        if(transactions.isEmpty()) {
-            throw new InvalidDateRangeException("No valid transactions for the duration specified for Customer Id: " + customerId);
+        List<Transaction> transactions = transactionRepository.findTransactionsForCustomerInDateRange(customerId, range.startDate(), range.endDate());
+        if (transactions.isEmpty()) {
+            throw new NoTransactionsFoundException("No valid transactions for the duration specified for Customer Id: " + customerId);
         }
         Map<YearMonth, List<Transaction>> monthwiseTransactions = transactions.stream()
                 .collect(Collectors.groupingBy(transaction -> YearMonth.from(transaction.getTransactionDate())));
         List<MonthlyRewardInfo> monthlyRewards = generateMonthlyRewards(monthwiseTransactions, range);
-        return buildRewardsSummaryResponse(customer, range.getStartDate().toLocalDate(), range.getEndDate().toLocalDate(), monthlyRewards);
+        return buildRewardsSummaryResponse(customer, range.startDate().toLocalDate(), range.endDate().toLocalDate(), monthlyRewards);
     }
 
     private DateRange resolveDateRange(Integer months, LocalDate startDate, LocalDate endDate) {
@@ -58,7 +60,7 @@ public class RewardsService {
             return verifyAndCalculateDateRangeForDuration(calculatedStartDate, endDate);
         } else if (startDate != null) {
             LocalDate startDatePlusMonths = startDate.plusMonths(months);
-            LocalDate calculatedEndDate = (startDatePlusMonths.isAfter(LocalDate.now()))?LocalDate.now():startDatePlusMonths;
+            LocalDate calculatedEndDate = (startDatePlusMonths.isAfter(LocalDate.now())) ? LocalDate.now() : startDatePlusMonths;
             return verifyAndCalculateDateRangeForDuration(startDate, calculatedEndDate);
         }
         return verifyAndCalculateDateRangeForPastMonths(months);
@@ -81,7 +83,7 @@ public class RewardsService {
 
     private List<MonthlyRewardInfo> generateMonthlyRewards(Map<YearMonth, List<Transaction>> monthwiseTransactions, DateRange range) {
         List<MonthlyRewardInfo> monthlyRewards = new ArrayList<>();
-        for(LocalDateTime month = range.getStartDate(); !month.isAfter(range.getEndDate()); month = month.plusMonths(1)) {
+        for (LocalDateTime month = range.startDate(); !month.isAfter(range.endDate()); month = month.plusMonths(1)) {
             YearMonth monthInfo = YearMonth.from(month);
             List<Transaction> transactions = monthwiseTransactions.getOrDefault(YearMonth.from(month), Collections.emptyList());
             BigDecimal rewardPoints = transactions.stream().map(transaction -> getRewardPoints(transaction.getAmount())).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -103,9 +105,9 @@ public class RewardsService {
     }
 
     private RewardsSummaryResponse buildRewardsSummaryResponse(Customer customer, LocalDate startDate, LocalDate endDate, List<MonthlyRewardInfo> monthlyRewards) {
-        BigDecimal totalRewardPoints = monthlyRewards.stream().map(MonthlyRewardInfo::getRewardPoints).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalTransactionAmount = monthlyRewards.stream().map(MonthlyRewardInfo::getMonthlyTransactionAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        Integer totalTransactionCount = monthlyRewards.stream().mapToInt(MonthlyRewardInfo::getMonthlyTransactionsCount).sum();
-        return new RewardsSummaryResponse(new CustomerInfo(customer), startDate, endDate, totalRewardPoints, totalTransactionAmount,totalTransactionCount, monthlyRewards);
+        BigDecimal totalRewardPoints = monthlyRewards.stream().map(MonthlyRewardInfo::rewardPoints).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalTransactionAmount = monthlyRewards.stream().map(MonthlyRewardInfo::monthlyTransactionAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        int totalTransactionCount = monthlyRewards.stream().mapToInt(MonthlyRewardInfo::monthlyTransactionsCount).sum();
+        return new RewardsSummaryResponse(new CustomerInfo(customer), startDate, endDate, totalRewardPoints, totalTransactionAmount, totalTransactionCount, monthlyRewards);
     }
 }

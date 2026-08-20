@@ -28,12 +28,18 @@ public class GlobalExceptionHandler {
         logException(exc);
         return buildErrorResponse(exc.getMessage(), HttpStatus.BAD_REQUEST);
     }
+    @ExceptionHandler(NoTransactionsFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoTransactionsFoundException(NoTransactionsFoundException exc) {
+        logException(exc);
+        return buildErrorResponse(exc.getMessage(), HttpStatus.NOT_FOUND);
+    }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException exc) {
         logException(exc);
         return buildErrorResponse(exc.getMessage(), HttpStatus.BAD_REQUEST);
     }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException exc) {
         logException(exc);
@@ -44,15 +50,18 @@ public class GlobalExceptionHandler {
                 .orElse("Constraint Validation error occurred.");
         return buildErrorResponse(message, HttpStatus.BAD_REQUEST);
     }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception exc) {
         logException(exc);
         return buildErrorResponse("An unexpected error occurred.", HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
     private ResponseEntity<ErrorResponse> buildErrorResponse(String message, HttpStatus status) {
         ErrorResponse body = new ErrorResponse(status.value(), status.name(), message);
         return new ResponseEntity<>(body, status);
     }
+
     private <T extends Exception> void logException(T exc) {
         logger.error("{} occurred: {}", exc.getClass().getName(), exc.getMessage());
     }

@@ -4,6 +4,7 @@ import com.retail.rewards.entity.Customer;
 import com.retail.rewards.entity.Transaction;
 import com.retail.rewards.exception.InvalidCustomerException;
 import com.retail.rewards.exception.InvalidDateRangeException;
+import com.retail.rewards.exception.NoTransactionsFoundException;
 import com.retail.rewards.model.RewardsSummaryResponse;
 import com.retail.rewards.repository.CustomerRepository;
 import com.retail.rewards.repository.TransactionRepository;
@@ -79,6 +80,7 @@ public class RewardsServiceTest {
     void shouldReturnThreeHundredFiftyPointNineNineRewardPointsForAmount250_49() {
         assertEquals(new BigDecimal("350.98"), rewardsService.getRewardPoints(new BigDecimal("250.49")));
     }
+
     @Test
     @DisplayName("Verification of reward points for multiple transactions")
     void shouldCalculateRewardsSummaryForMultipleTransactions() {
@@ -100,10 +102,10 @@ public class RewardsServiceTest {
 
         RewardsSummaryResponse response = rewardsService.customerRewardsSummary(customerId, 3, startDate, endDate);
 
-        assertEquals(new BigDecimal("120.00"), response.getMonthlyRewards().get(0).getRewardPoints());
-        assertEquals(new BigDecimal("250.00"), response.getMonthlyRewards().get(1).getRewardPoints());
-        assertEquals(4, response.getTotalTransactionCount());
-        assertEquals(new BigDecimal("450.00"), response.getTotalTransactionAmount());
+        assertEquals(new BigDecimal("120.00"), response.monthlyRewards().get(0).rewardPoints());
+        assertEquals(new BigDecimal("250.00"), response.monthlyRewards().get(1).rewardPoints());
+        assertEquals(4, response.totalTransactionCount());
+        assertEquals(new BigDecimal("450.00"), response.totalTransactionAmount());
 
         verify(customerRepository, times(1)).findById(customerId);
         verify(transactionRepository, times(1)).findTransactionsForCustomerInDateRange(customerId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59));
@@ -143,7 +145,7 @@ public class RewardsServiceTest {
         when(transactionRepository.findTransactionsForCustomerInDateRange(anyString(), any(), any()))
                 .thenReturn(Collections.emptyList());
 
-        InvalidDateRangeException exc = assertThrows(InvalidDateRangeException.class, () -> rewardsService.customerRewardsSummary("CUST001", 3, null, null));
+        NoTransactionsFoundException exc = assertThrows(NoTransactionsFoundException.class, () -> rewardsService.customerRewardsSummary("CUST001", 3, null, null));
 
         assertEquals("No valid transactions for the duration specified for Customer Id: CUST001", exc.getMessage());
 
